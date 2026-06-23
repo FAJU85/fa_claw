@@ -12,7 +12,7 @@ import logging
 from pathlib import Path
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
-import requests
+from huggingface_hub import InferenceClient
 
 # Configure logging
 logging.basicConfig(
@@ -32,6 +32,10 @@ OPTIONAL_ENV_VARS = [
     'OPENCLAW_OPENROUTER_API_KEY',
     'OPENCLAW_HF_TOKEN'
 ]
+
+# Hugging Face chat-completion model served through the Inference Providers
+# router (https://router.huggingface.co). Override with OPENCLAW_HF_MODEL.
+DEFAULT_HF_MODEL = 'Qwen/Qwen2.5-7B-Instruct'
 
 def validate_environment():
     """Validate that all required environment variables are set."""
@@ -122,34 +126,31 @@ async def handle_message(update, context):
     logger.info(f"Hugging Face token available: {'YES' if hf_token else 'NO'}")
     
     if hf_token:
+        model = os.environ.get('OPENCLAW_HF_MODEL', DEFAULT_HF_MODEL)
         try:
-            # Send to Hugging Face Inference API
-            API_URL = "https://api-inference.huggingface.co/models/google/flan-t5-large"
-            headers = {"Authorization": f"Bearer {hf_token}"}
-            
-            logger.info(f"Sending request to Hugging Face API...")
-            response = requests.post(API_URL, headers=headers, json={"inputs": user_message})
-            
-            if response.status_code == 200:
-                result = response.json()
-                logger.info(f"Hugging Face response: {result}")
-                
-                # Extract the generated text
-                if isinstance(result, list) and len(result) > 0:
-                    ai_response = result[0].get('generated_text', 'No response generated')
-                elif isinstance(result, dict):
-                    ai_response = result.get('generated_text', 'No response generated')
-                else:
-                    ai_response = str(result)
-                
-                await update.message.reply_text(f"🤖 Open Claw AI Response:\n\n{ai_response}")
-            else:
-                error_msg = f"Hugging Face API error: {response.status_code} - {response.text}"
-                logger.error(error_msg)
-                await update.message.reply_text(f"⚠️ AI processing failed:\n{response.status_code}\n\nYour message was received but couldn't be processed.")
+            # Call the Hugging Face Inference Providers router via the
+            # OpenAI-compatible chat-completions API. The InferenceClient
+            # handles provider selection and routing automatically.
+            client = InferenceClient(token=hf_token)
+
+            logger.info(f"Sending request to Hugging Face model '{model}'...")
+            completion = client.chat_completion(
+                messages=[{"role": "user", "content": user_message}],
+                model=model,
+                max_tokens=512,
+            )
+
+            ai_response = completion.choices[0].message.content
+            if not ai_response:
+                ai_response = "No response generated"
+
+            logger.info("Hugging Face response received")
+            await update.message.reply_text(f"🤖 Open Claw AI Response:\n\n{ai_response}")
         except Exception as e:
             logger.error(f"Error calling Hugging Face API: {e}")
-            await update.message.reply_text(f"⚠️ Error during AI processing: {str(e)}\n\nYour message was received.")
+            await update.message.reply_text(
+                f"⚠️ Error during AI processing: {str(e)}\n\nYour message was received."
+            )
     else:
         # Placeholder response when HF is not configured
         logger.warning("Hugging Face not configured - using placeholder response")

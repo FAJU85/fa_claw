@@ -91,8 +91,14 @@ The following environment variables are injected at runtime via the secret group
 
 | Variable | Description |
 |----------|-------------|
+| `OPENCLAW_HF_MODEL` | Chat-completion model id served by the HF Inference Providers router (default: `Qwen/Qwen2.5-7B-Instruct`) |
 | `OPENCLAW_GROQ_API_KEY` | Groq LLM inference API key |
 | `OPENCLAW_OPENROUTER_API_KEY` | OpenRouter multi-model API key |
+
+> **Note**: The Hugging Face token must be a user access token with the
+> **"Inference Providers"** permission. Open Claw calls the chat-completions
+> API through the `router.huggingface.co` endpoint (the legacy
+> `api-inference.huggingface.co` serverless endpoint is no longer used).
 
 ### Persistent Storage
 

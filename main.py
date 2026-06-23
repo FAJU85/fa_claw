@@ -66,6 +66,84 @@ def initialize_storage():
         logger.error(f"Failed to initialize storage at {data_path}: {e}")
         return False
 
+async def start_command(update, context):
+    """Handle the /start command."""
+    await update.message.reply_text(
+        "👋 Welcome to Open Claw!\n\n"
+        "I'm your AI assistant powered by Hugging Face models.\n"
+        "Send me a message and I'll process it for you.\n\n"
+        "Available commands:\n"
+        "/start - Show this welcome message\n"
+        "/help - Show help information\n"
+        "/status - Show system status"
+    )
+
+async def help_command(update, context):
+    """Handle the /help command."""
+    await update.message.reply_text(
+        "📖 Open Claw Help\n\n"
+        "Just send me any text message and I'll process it using AI.\n"
+        "You can also use the following commands:\n\n"
+        "/start - Welcome message\n"
+        "/help - This help message\n"
+        "/status - Check system status"
+    )
+
+async def status_command(update, context):
+    """Handle the /status command."""
+    hf_key = os.environ.get('OPENCLAW_HUGGINGFACE_API_KEY', 'Not set')
+    telegram_token = os.environ.get('OPENCLAW_TELEGRAM_BOT_TOKEN', 'Not set')
+    
+    status_msg = (
+        "🔧 Open Claw Status\n\n"
+        f"✅ Telegram Bot: {'Connected' if telegram_token else 'Disconnected'}\n"
+        f"✅ Hugging Face: {'Connected' if hf_key else 'Disconnected'}\n"
+        f"⚙️ Groq: {'Connected' if os.environ.get('OPENCLAW_GROQ_API_KEY') else 'Not configured'}\n"
+        f"⚙️ OpenRouter: {'Connected' if os.environ.get('OPENCLAW_OPENROUTER_API_KEY') else 'Not configured'}\n\n"
+        "Storage: /data (persistent)"
+    )
+    await update.message.reply_text(status_msg)
+
+async def handle_message(update, context):
+    """Handle incoming text messages."""
+    user_message = update.message.text
+    logger.info(f"Received message from user {update.message.chat.id}: {user_message}")
+    
+    # TODO: Integrate with Hugging Face for AI processing
+    # For now, echo back with a placeholder response
+    response = (
+        f"🤖 Open Claw received your message:\n\n"
+        f"\"{user_message}\"\n\n"
+        f"AI processing will be implemented soon with Hugging Face integration."
+    )
+    await update.message.reply_text(response)
+
+async def error_handler(update, context):
+    """Handle errors."""
+    logger.error(f"Update {update} caused error: {context.error}")
+
+def setup_telegram_bot():
+    """Set up and start the Telegram bot."""
+    from telegram.ext import Application, CommandHandler, MessageHandler, filters
+    
+    token = os.environ.get('OPENCLAW_TELEGRAM_BOT_TOKEN')
+    
+    # Build the application
+    application = Application.builder().token(token).build()
+    
+    # Add handlers
+    application.add_handler(CommandHandler("start", start_command))
+    application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("status", status_command))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    
+    # Add error handler
+    application.add_error_handler(error_handler)
+    
+    logger.info("Telegram bot handlers configured")
+    
+    return application
+
 def main():
     """Main entry point for the Open Claw daemon."""
     logger.info("Starting Open Claw Headless Daemon...")
@@ -78,27 +156,31 @@ def main():
     if not initialize_storage():
         sys.exit(1)
     
+    # Set up Telegram bot
+    try:
+        application = setup_telegram_bot()
+        logger.info("Telegram bot initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize Telegram bot: {e}")
+        sys.exit(1)
+    
     # Log successful initialization
     logger.info("Open Claw Headless Daemon initialized successfully")
     logger.info("Required integrations: Telegram Bot, Hugging Face")
     logger.info("Optional integrations (not configured): Groq, OpenRouter")
-    logger.info("Waiting for incoming requests...")
+    logger.info("Starting Telegram bot polling...")
     
-    # TODO: Implement actual daemon logic here
-    # This could include:
-    # - Telegram bot polling or webhook setup
-    # - Hugging Face model loading or API setup
-    # - Groq API client initialization (when key is provided)
-    # - OpenRouter API client initialization (when key is provided)
-    
-    # Keep the daemon running
+    # Start the bot
     try:
-        while True:
-            # Placeholder for actual event loop
-            pass
+        # Run the bot until Ctrl-C is pressed
+        application.run_polling(allowed_updates=Update.ALL_TYPES)
     except KeyboardInterrupt:
         logger.info("Shutting down Open Claw Daemon...")
         sys.exit(0)
+    except Exception as e:
+        logger.error(f"Bot polling error: {e}")
+        sys.exit(1)
 
 if __name__ == '__main__':
+    from telegram import Update
     main()

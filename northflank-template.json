@@ -8,22 +8,22 @@
   "spec": {
     "arguments": [
       {
-        "name": "TELEGRAM_BOT_TOKEN",
+        "name": "OPENCLAW_TELEGRAM_BOT_TOKEN",
         "type": "secret",
         "description": "Telegram Bot Token from BotFather"
       },
       {
-        "name": "GROQ_API_KEY",
+        "name": "OPENCLAW_GROQ_API_KEY",
         "type": "secret",
         "description": "Groq API Key for LLM inference"
       },
       {
-        "name": "OPENROUTER_API_KEY",
+        "name": "OPENCLAW_OPENROUTER_API_KEY",
         "type": "secret",
         "description": "OpenRouter API Key for multi-model access"
       },
       {
-        "name": "HUGGINGFACE_API_KEY",
+        "name": "OPENCLAW_HUGGINGFACE_API_KEY",
         "type": "secret",
         "description": "Hugging Face API Key for model access"
       },
@@ -52,24 +52,24 @@
             "projectContext": "${target-project.id}",
             "secrets": [
               {
-                "name": "TELEGRAM_BOT_TOKEN",
-                "value": "${arguments.TELEGRAM_BOT_TOKEN}"
+                "name": "OPENCLAW_TELEGRAM_BOT_TOKEN",
+                "value": "${arguments.OPENCLAW_TELEGRAM_BOT_TOKEN}"
               },
               {
-                "name": "GROQ_API_KEY",
-                "value": "${arguments.GROQ_API_KEY}"
+                "name": "OPENCLAW_GROQ_API_KEY",
+                "value": "${arguments.OPENCLAW_GROQ_API_KEY}"
               },
               {
-                "name": "OPENROUTER_API_KEY",
-                "value": "${arguments.OPENROUTER_API_KEY}"
+                "name": "OPENCLAW_OPENROUTER_API_KEY",
+                "value": "${arguments.OPENCLAW_OPENROUTER_API_KEY}"
               },
               {
-                "name": "HUGGINGFACE_API_KEY",
-                "value": "${arguments.HUGGINGFACE_API_KEY}"
+                "name": "OPENCLAW_HUGGINGFACE_API_KEY",
+                "value": "${arguments.OPENCLAW_HUGGINGFACE_API_KEY}"
               },
               {
-                "name": "HF_TOKEN",
-                "value": "${arguments.HUGGINGFACE_API_KEY}"
+                "name": "OPENCLAW_HF_TOKEN",
+                "value": "${arguments.OPENCLAW_HUGGINGFACE_API_KEY}"
               }
             ]
           }

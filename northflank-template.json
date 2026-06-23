@@ -1,98 +1,123 @@
 {
-  "apiVersion": "v1",
-  "kind": "Template",
-  "metadata": {
-    "name": "openclaw-automated-deployment",
-    "description": "Deploy Open Claw headless engine to Hugging Face Space Pro via Northflank IaC pipeline"
+  "apiVersion": "v1.2",
+  "name": "openclaw-automated-deployment",
+  "description": "Deploy the Open Claw headless Telegram + Hugging Face daemon to Northflank via an Infrastructure-as-Code pipeline.",
+  "arguments": {
+    "OPENCLAW_TELEGRAM_BOT_TOKEN": "",
+    "OPENCLAW_HUGGINGFACE_API_KEY": "",
+    "GIT_REPO_URL": "https://github.com/FAJU85/fa_claw",
+    "GIT_BRANCH": "main",
+    "PROJECT_REGION": "europe-west",
+    "DEPLOYMENT_PLAN": "nf-compute-20"
+  },
+  "options": {
+    "autorun": false,
+    "concurrencyPolicy": "allow"
   },
   "spec": {
-    "arguments": [
-      {
-        "name": "OPENCLAW_TELEGRAM_BOT_TOKEN",
-        "type": "secret",
-        "description": "Telegram Bot Token from BotFather"
-      },
-      {
-        "name": "OPENCLAW_HUGGINGFACE_API_KEY",
-        "type": "secret",
-        "description": "Hugging Face API Key for model access"
-      },
-      {
-        "name": "GIT_REPO_URL",
-        "type": "string",
-        "description": "Git repository URL containing the Dockerfile"
-      }
-    ],
-    "workflow": {
+    "kind": "Workflow",
+    "spec": {
       "type": "sequential",
-      "nodes": [
+      "steps": [
         {
-          "id": "target-project",
           "kind": "Project",
+          "ref": "project",
           "spec": {
             "name": "openclaw-headless-runtime",
-            "region": "europe-west"
+            "region": "${args.PROJECT_REGION}",
+            "networking": {
+              "allowedIngressProjects": []
+            }
           }
         },
         {
-          "id": "secure-runtime-secrets",
-          "kind": "SecretGroup",
+          "kind": "Workflow",
           "spec": {
-            "name": "openclaw-multi-provider-credentials",
-            "projectContext": "${target-project.id}",
-            "secrets": [
+            "type": "sequential",
+            "context": {
+              "projectId": "${refs.project.id}"
+            },
+            "steps": [
               {
-                "name": "OPENCLAW_TELEGRAM_BOT_TOKEN",
-                "value": "${arguments.OPENCLAW_TELEGRAM_BOT_TOKEN}"
+                "kind": "SecretGroup",
+                "ref": "secrets",
+                "spec": {
+                  "name": "openclaw-credentials",
+                  "secretType": "environment",
+                  "priority": 10,
+                  "restrictions": {
+                    "restricted": false,
+                    "nfObjects": []
+                  },
+                  "secrets": {
+                    "variables": {
+                      "OPENCLAW_TELEGRAM_BOT_TOKEN": "${args.OPENCLAW_TELEGRAM_BOT_TOKEN}",
+                      "OPENCLAW_HUGGINGFACE_API_KEY": "${args.OPENCLAW_HUGGINGFACE_API_KEY}",
+                      "OPENCLAW_HF_TOKEN": "${args.OPENCLAW_HUGGINGFACE_API_KEY}"
+                    }
+                  }
+                }
               },
               {
-                "name": "OPENCLAW_HUGGINGFACE_API_KEY",
-                "value": "${arguments.OPENCLAW_HUGGINGFACE_API_KEY}"
+                "kind": "CombinedService",
+                "ref": "service",
+                "spec": {
+                  "name": "openclaw-gateway",
+                  "billing": {
+                    "deploymentPlan": "${args.DEPLOYMENT_PLAN}",
+                    "buildPlan": "nf-compute-400-16"
+                  },
+                  "deployment": {
+                    "instances": 1,
+                    "docker": {
+                      "configType": "default"
+                    },
+                    "storage": {
+                      "ephemeralStorage": {
+                        "storageSize": 1024
+                      },
+                      "shmSize": 64
+                    }
+                  },
+                  "vcsData": {
+                    "projectType": "github",
+                    "projectUrl": "${args.GIT_REPO_URL}",
+                    "projectBranch": "${args.GIT_BRANCH}"
+                  },
+                  "buildSettings": {
+                    "dockerfile": {
+                      "buildEngine": "kaniko",
+                      "useCache": false,
+                      "dockerFilePath": "/Dockerfile",
+                      "dockerWorkDir": "/"
+                    }
+                  },
+                  "runtimeEnvironment": {},
+                  "ports": [],
+                  "disabledCI": false
+                }
               },
               {
-                "name": "OPENCLAW_HF_TOKEN",
-                "value": "${arguments.OPENCLAW_HUGGINGFACE_API_KEY}"
-              }
-            ]
-          }
-        },
-        {
-          "id": "stateful-storage-volume",
-          "kind": "Volume",
-          "spec": {
-            "name": "openclaw-state",
-            "projectContext": "${target-project.id}",
-            "capacity": "4GB",
-            "accessMode": "shared-read-write-once"
-          }
-        },
-        {
-          "id": "headless-daemon-worker",
-          "kind": "Service",
-          "spec": {
-            "name": "openclaw-gateway",
-            "projectContext": "${target-project.id}",
-            "type": "worker",
-            "billingPlan": "micro",
-            "source": {
-              "type": "vcs",
-              "repository": "${arguments.GIT_REPO_URL}",
-              "branch": "main"
-            },
-            "build": {
-              "method": "dockerfile",
-              "path": "./Dockerfile"
-            },
-            "instances": 1,
-            "volumes": [
-              {
-                "volumeId": "${stateful-storage-volume.id}",
-                "mountPath": "/data"
-              }
-            ],
-            "envFrom": [
-              {
-                "secretGroupRef": "${secure-runtime-secrets.id}"
+                "kind": "Volume",
+                "ref": "volume",
+                "spec": {
+                  "name": "openclaw-state",
+                  "mounts": [
+                    {
+                      "containerMountPath": "/data"
+                    }
+                  ],
+                  "spec": {
+                    "storageClassName": "ssd",
+                    "storageSize": 4096
+                  },
+                  "attachedObjects": [
+                    {
+                      "id": "${refs.service.id}",
+                      "type": "service"
+                    }
+                  ]
+                }
               }
             ]
           }

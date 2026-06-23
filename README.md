@@ -40,19 +40,30 @@ This deployment automates the provisioning of:
 ### 2. Execute Template
 
 1. Open the saved template and click **Run**
-2. Fill in all argument fields:
+2. Fill in the argument fields:
    - `OPENCLAW_TELEGRAM_BOT_TOKEN`: Your Telegram bot token
-   - `OPENCLAW_HUGGINGFACE_API_KEY`: Your Hugging Face API key
-   - `GIT_REPO_URL`: URL to this Git repository
+   - `OPENCLAW_HUGGINGFACE_API_KEY`: Your Hugging Face token (must have the **Inference Providers** permission)
+   - `GIT_REPO_URL`: HTTPS URL to this Git repository
+   - `GIT_BRANCH`: Branch to build from (default `main`)
+   - `PROJECT_REGION`: Northflank region (default `europe-west`)
+   - `DEPLOYMENT_PLAN`: Northflank compute plan ID for the worker (default `nf-compute-20`)
 3. Click **Execute**
+
+> **Plan IDs**: Northflank templates require the *plan ID* (e.g. `nf-compute-20`),
+> not the friendly name shown in the UI. Pick any valid compute plan for your
+> account and pass it via `DEPLOYMENT_PLAN`.
 
 ### 3. Monitor Deployment
 
 The sequential workflow will execute:
-1. **Node 1**: Create project `openclaw-headless-runtime`
-2. **Node 2**: Create secret group with API credentials (Telegram, Hugging Face)
-3. **Node 3**: Provision 4GB persistent volume
-4. **Node 4**: Build and deploy worker service
+1. **Project** (`openclaw-headless-runtime`) is created.
+2. **SecretGroup** (`openclaw-credentials`) is created with the API credentials. It is
+   *unrestricted*, so its variables are injected into every workload in the project
+   automatically — no explicit per-service binding is needed.
+3. **CombinedService** (`openclaw-gateway`) builds the Dockerfile from the repo and
+   deploys it. It exposes no ports, so it runs as a long-lived worker (the Telegram
+   bot uses outbound long-polling).
+4. **Volume** (`openclaw-state`, 4GB) is provisioned and attached to the service at `/data`.
 
 ### 4. Verify Deployment
 
@@ -66,13 +77,14 @@ The sequential workflow will execute:
 ## Architecture
 
 ```
-target-project (Node 1)
+project (openclaw-headless-runtime)
+    │   (child workflow runs in projectId context)
     │
-    ├──> secure-runtime-secrets (Node 2) ── requires project.id
+    ├──> SecretGroup (openclaw-credentials)   — unrestricted, auto-injects into all workloads
     │
-    ├──> stateful-storage-volume (Node 3) ── requires project.id
+    ├──> CombinedService (openclaw-gateway)   — builds Dockerfile, deploys portless worker
     │
-    └──> headless-daemon-worker (Node 4) ── requires project.id, volume.id, secrets
+    └──> Volume (openclaw-state, 4GB)         — attached to ${refs.service.id} at /data
 ```
 
 ## Configuration
@@ -103,8 +115,8 @@ The following environment variables are injected at runtime via the secret group
 ### Persistent Storage
 
 - **Volume Name**: `openclaw-state`
-- **Capacity**: 4GB
-- **Access Mode**: `shared-read-write-once`
+- **Capacity**: 4GB (`storageSize: 4096` MB)
+- **Storage Class**: `ssd`
 - **Mount Path**: `/data`
 
 ## Updating Configuration

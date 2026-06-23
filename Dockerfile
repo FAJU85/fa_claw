@@ -19,10 +19,5 @@ COPY . .
 # Create data directory for persistent storage
 RUN mkdir -p /data && chmod 755 /data
 
-# Set environment variables (will be overridden by Northflank secrets)
-ENV OPENCLAW_TELEGRAM_BOT_TOKEN=""
-ENV OPENCLAW_HUGGINGFACE_API_KEY=""
-ENV OPENCLAW_HF_TOKEN=""
-
 # Default command to run the Open Claw headless daemon
 CMD ["python", "main.py"]

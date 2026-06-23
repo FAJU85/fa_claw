@@ -98,17 +98,22 @@ The following environment variables are injected at runtime via the secret group
 
 | Variable | Description |
 |----------|-------------|
-| `OPENCLAW_TELEGRAM_BOT_TOKEN` | Telegram Bot authentication token |
-| `OPENCLAW_HUGGINGFACE_API_KEY` | Hugging Face model access key |
+| `OPENCLAW_TELEGRAM_BOT_TOKEN` | Telegram Bot authentication token (**required**) |
+| `OPENCLAW_GROQ_API_KEY` | Groq API key. When set, Groq is the **preferred** AI provider |
+| `OPENCLAW_HUGGINGFACE_API_KEY` | Hugging Face token (used when Groq is not configured) |
 | `OPENCLAW_HF_TOKEN` | Alias for OPENCLAW_HUGGINGFACE_API_KEY (HF SDK convention) |
+
+**Provider selection**: if `OPENCLAW_GROQ_API_KEY` is set the bot uses Groq;
+otherwise it falls back to Hugging Face. If neither is set, messages get a
+placeholder reply. At least one provider key is needed for AI responses.
 
 **Optional Environment Variables** (can be added later):
 
 | Variable | Description |
 |----------|-------------|
-| `OPENCLAW_HF_MODEL` | Chat-completion model id served by the HF Inference Providers router (default: `Qwen/Qwen2.5-7B-Instruct`) |
-| `OPENCLAW_GROQ_API_KEY` | Groq LLM inference API key |
-| `OPENCLAW_OPENROUTER_API_KEY` | OpenRouter multi-model API key |
+| `OPENCLAW_GROQ_MODEL` | Groq chat-completion model id (default: `llama-3.3-70b-versatile`) |
+| `OPENCLAW_HF_MODEL` | HF Inference Providers chat model id (default: `Qwen/Qwen2.5-7B-Instruct`) |
+| `OPENCLAW_OPENROUTER_API_KEY` | OpenRouter multi-model API key (not yet wired up) |
 
 > **Note**: The Hugging Face token must be a user access token with the
 > **"Inference Providers"** permission. Open Claw calls the chat-completions

@@ -38,6 +38,9 @@ OPTIONAL_ENV_VARS = [
 # router (https://router.huggingface.co). Override with OPENCLAW_HF_MODEL.
 DEFAULT_HF_MODEL = 'Qwen/Qwen2.5-7B-Instruct'
 
+# Groq chat-completion model. Override with OPENCLAW_GROQ_MODEL.
+DEFAULT_GROQ_MODEL = 'llama-3.3-70b-versatile'
+
 def validate_environment():
     """Validate that all required environment variables are set."""
     missing_vars = []
@@ -99,73 +102,108 @@ async def help_command(update, context):
 
 async def status_command(update, context):
     """Handle the /status command."""
-    hf_key = os.environ.get('OPENCLAW_HUGGINGFACE_API_KEY')
     telegram_token = os.environ.get('OPENCLAW_TELEGRAM_BOT_TOKEN', 'Not set')
-    
+    groq_key = get_groq_token()
+    hf_key = get_hf_token()
+
+    # Mirror the provider-selection logic used by handle_message.
+    if groq_key:
+        active_provider = "Groq"
+    elif hf_key:
+        active_provider = "Hugging Face"
+    else:
+        active_provider = "None (set a provider key)"
+
     status_msg = (
         "🔧 Open Claw Status\n\n"
         f"✅ Telegram Bot: {'Connected' if telegram_token else 'Disconnected'}\n"
-        f"{'✅' if hf_key else '❌'} Hugging Face: {'Connected' if hf_key else 'Not configured (optional)'}\n"
-        f"⚙️ Groq: {'Connected' if os.environ.get('OPENCLAW_GROQ_API_KEY') else 'Not configured'}\n"
+        f"{'✅' if groq_key else '⚙️'} Groq: {'Connected' if groq_key else 'Not configured'}\n"
+        f"{'✅' if hf_key else '⚙️'} Hugging Face: {'Connected' if hf_key else 'Not configured'}\n"
         f"⚙️ OpenRouter: {'Connected' if os.environ.get('OPENCLAW_OPENROUTER_API_KEY') else 'Not configured'}\n\n"
+        f"🧠 Active AI provider: {active_provider}\n"
         "Storage: /data (persistent)"
     )
     await update.message.reply_text(status_msg)
+
+def get_groq_token():
+    """Return the configured Groq API key, if any."""
+    return os.environ.get('OPENCLAW_GROQ_API_KEY') or os.environ.get('GROQ_API_KEY')
+
+
+def get_hf_token():
+    """Return the configured Hugging Face token, if any."""
+    return os.environ.get('OPENCLAW_HUGGINGFACE_API_KEY') or os.environ.get('OPENCLAW_HF_TOKEN')
+
+
+async def _groq_reply(user_message):
+    """Generate a reply with the Groq chat-completions API."""
+    from groq import Groq  # imported lazily so HF-only deploys don't need it
+
+    model = os.environ.get('OPENCLAW_GROQ_MODEL') or DEFAULT_GROQ_MODEL
+    client = Groq(api_key=get_groq_token())
+
+    logger.info(f"Sending request to Groq model '{model}'...")
+    # The Groq SDK call is blocking; run it off the asyncio event loop.
+    completion = await asyncio.to_thread(
+        client.chat.completions.create,
+        messages=[{"role": "user", "content": user_message}],
+        model=model,
+        max_tokens=512,
+    )
+    return completion.choices[0].message.content
+
+
+async def _hf_reply(user_message):
+    """Generate a reply with the Hugging Face Inference Providers router."""
+    model = os.environ.get('OPENCLAW_HF_MODEL') or DEFAULT_HF_MODEL
+    # The InferenceClient handles provider selection and routing automatically.
+    client = InferenceClient(token=get_hf_token())
+
+    logger.info(f"Sending request to Hugging Face model '{model}'...")
+    # chat_completion is a blocking network call; run it in a worker thread.
+    completion = await asyncio.to_thread(
+        client.chat_completion,
+        messages=[{"role": "user", "content": user_message}],
+        model=model,
+        max_tokens=512,
+    )
+    return completion.choices[0].message.content
+
 
 async def handle_message(update, context):
     """Handle incoming text messages."""
     user_message = update.message.text
     logger.info(f"Received message from user {update.message.chat.id}: {user_message}")
-    
-    # Check if Hugging Face is configured
-    hf_key_1 = os.environ.get('OPENCLAW_HUGGINGFACE_API_KEY')
-    hf_key_2 = os.environ.get('OPENCLAW_HF_TOKEN')
-    hf_token = hf_key_1 or hf_key_2
-    
-    logger.info(f"Hugging Face key check - OPENCLAW_HUGGINGFACE_API_KEY: {'SET' if hf_key_1 else 'NOT SET'}")
-    logger.info(f"Hugging Face key check - OPENCLAW_HF_TOKEN: {'SET' if hf_key_2 else 'NOT SET'}")
-    logger.info(f"Hugging Face token available: {'YES' if hf_token else 'NO'}")
-    
-    if hf_token:
-        model = os.environ.get('OPENCLAW_HF_MODEL') or DEFAULT_HF_MODEL
-        try:
-            # Call the Hugging Face Inference Providers router via the
-            # OpenAI-compatible chat-completions API. The InferenceClient
-            # handles provider selection and routing automatically.
-            client = InferenceClient(token=hf_token)
 
-            logger.info(f"Sending request to Hugging Face model '{model}'...")
-            # chat_completion is a blocking network call; run it in a worker
-            # thread so it does not block the bot's asyncio event loop.
-            completion = await asyncio.to_thread(
-                client.chat_completion,
-                messages=[{"role": "user", "content": user_message}],
-                model=model,
-                max_tokens=512,
-            )
-
-            ai_response = completion.choices[0].message.content
-            if not ai_response:
-                ai_response = "No response generated"
-
-            logger.info("Hugging Face response received")
-            await update.message.reply_text(f"🤖 Open Claw AI Response:\n\n{ai_response}")
-        except Exception as e:
-            # Log full detail server-side, but don't leak internals to users.
-            logger.error(f"Error calling Hugging Face API: {e}")
-            await update.message.reply_text(
-                "⚠️ Sorry, I couldn't process your message right now. "
-                "Your message was received — please try again shortly."
-            )
+    # Pick a provider: Groq is preferred when configured (fast, generous free
+    # tier), otherwise fall back to Hugging Face Inference Providers.
+    if get_groq_token():
+        provider, generate = "Groq", _groq_reply
+    elif get_hf_token():
+        provider, generate = "Hugging Face", _hf_reply
     else:
-        # Placeholder response when HF is not configured
-        logger.warning("Hugging Face not configured - using placeholder response")
-        response = (
+        logger.warning("No AI provider configured - using placeholder response")
+        await update.message.reply_text(
             f"🤖 Open Claw received your message:\n\n"
             f"\"{user_message}\"\n\n"
-            f"AI processing will be implemented soon with Hugging Face integration."
+            f"No AI provider is configured yet. Set OPENCLAW_GROQ_API_KEY or "
+            f"OPENCLAW_HUGGINGFACE_API_KEY to enable AI responses."
         )
-        await update.message.reply_text(response)
+        return
+
+    try:
+        ai_response = await generate(user_message)
+        if not ai_response:
+            ai_response = "No response generated"
+        logger.info(f"{provider} response received")
+        await update.message.reply_text(f"🤖 Open Claw AI Response:\n\n{ai_response}")
+    except Exception as e:
+        # Log full detail server-side, but don't leak internals to users.
+        logger.error(f"Error calling {provider} API: {e}")
+        await update.message.reply_text(
+            "⚠️ Sorry, I couldn't process your message right now. "
+            "Your message was received — please try again shortly."
+        )
 
 async def error_handler(update, context):
     """Handle errors."""

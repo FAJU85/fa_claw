@@ -1,0 +1,121 @@
+{
+  "apiVersion": "v1",
+  "kind": "Template",
+  "metadata": {
+    "name": "openclaw-automated-deployment",
+    "description": "Deploy Open Claw headless engine to Hugging Face Space Pro via Northflank IaC pipeline"
+  },
+  "spec": {
+    "arguments": [
+      {
+        "name": "TELEGRAM_BOT_TOKEN",
+        "type": "secret",
+        "description": "Telegram Bot Token from BotFather"
+      },
+      {
+        "name": "GROQ_API_KEY",
+        "type": "secret",
+        "description": "Groq API Key for LLM inference"
+      },
+      {
+        "name": "OPENROUTER_API_KEY",
+        "type": "secret",
+        "description": "OpenRouter API Key for multi-model access"
+      },
+      {
+        "name": "HUGGINGFACE_API_KEY",
+        "type": "secret",
+        "description": "Hugging Face API Key for model access"
+      },
+      {
+        "name": "GIT_REPO_URL",
+        "type": "string",
+        "description": "Git repository URL containing the Dockerfile"
+      }
+    ],
+    "workflow": {
+      "type": "sequential",
+      "nodes": [
+        {
+          "id": "target-project",
+          "kind": "Project",
+          "spec": {
+            "name": "openclaw-headless-runtime",
+            "region": "europe-west"
+          }
+        },
+        {
+          "id": "secure-runtime-secrets",
+          "kind": "SecretGroup",
+          "spec": {
+            "name": "openclaw-multi-provider-credentials",
+            "projectContext": "${target-project.id}",
+            "secrets": [
+              {
+                "name": "TELEGRAM_BOT_TOKEN",
+                "value": "${arguments.TELEGRAM_BOT_TOKEN}"
+              },
+              {
+                "name": "GROQ_API_KEY",
+                "value": "${arguments.GROQ_API_KEY}"
+              },
+              {
+                "name": "OPENROUTER_API_KEY",
+                "value": "${arguments.OPENROUTER_API_KEY}"
+              },
+              {
+                "name": "HUGGINGFACE_API_KEY",
+                "value": "${arguments.HUGGINGFACE_API_KEY}"
+              },
+              {
+                "name": "HF_TOKEN",
+                "value": "${arguments.HUGGINGFACE_API_KEY}"
+              }
+            ]
+          }
+        },
+        {
+          "id": "stateful-storage-volume",
+          "kind": "Volume",
+          "spec": {
+            "name": "openclaw-state",
+            "projectContext": "${target-project.id}",
+            "capacity": "4GB",
+            "accessMode": "shared-read-write-once"
+          }
+        },
+        {
+          "id": "headless-daemon-worker",
+          "kind": "Service",
+          "spec": {
+            "name": "openclaw-gateway",
+            "projectContext": "${target-project.id}",
+            "type": "worker",
+            "billingPlan": "micro",
+            "source": {
+              "type": "vcs",
+              "repository": "${arguments.GIT_REPO_URL}",
+              "branch": "main"
+            },
+            "build": {
+              "method": "dockerfile",
+              "path": "./Dockerfile"
+            },
+            "instances": 1,
+            "volumes": [
+              {
+                "volumeId": "${stateful-storage-volume.id}",
+                "mountPath": "/data"
+              }
+            ],
+            "envFrom": [
+              {
+                "secretGroupRef": "${secure-runtime-secrets.id}"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

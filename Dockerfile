@@ -20,11 +20,11 @@ COPY . .
 RUN mkdir -p /data && chmod 755 /data
 
 # Set environment variables (will be overridden by Northflank secrets)
-ENV TELEGRAM_BOT_TOKEN=""
-ENV GROQ_API_KEY=""
-ENV OPENROUTER_API_KEY=""
-ENV HUGGINGFACE_API_KEY=""
-ENV HF_TOKEN=""
+ENV OPENCLAW_TELEGRAM_BOT_TOKEN=""
+ENV OPENCLAW_GROQ_API_KEY=""
+ENV OPENCLAW_OPENROUTER_API_KEY=""
+ENV OPENCLAW_HUGGINGFACE_API_KEY=""
+ENV OPENCLAW_HF_TOKEN=""
 
 # Default command to run the Open Claw headless daemon
 CMD ["python", "main.py"]

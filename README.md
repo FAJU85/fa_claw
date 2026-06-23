@@ -40,19 +40,33 @@ This deployment automates the provisioning of:
 ### 2. Execute Template
 
 1. Open the saved template and click **Run**
-2. Fill in all argument fields:
+2. Fill in the argument fields:
    - `OPENCLAW_TELEGRAM_BOT_TOKEN`: Your Telegram bot token
-   - `OPENCLAW_HUGGINGFACE_API_KEY`: Your Hugging Face API key
-   - `GIT_REPO_URL`: URL to this Git repository
+   - `OPENCLAW_HUGGINGFACE_API_KEY`: Your Hugging Face token (must have the **Inference Providers** permission)
+   - `GIT_REPO_URL`: HTTPS URL to this Git repository
+   - `GIT_BRANCH`: Branch to build from (default `main`)
+   - `PROJECT_REGION`: Northflank region (default `europe-west`)
+   - `DEPLOYMENT_PLAN`: Northflank compute plan ID for the running worker (default `nf-compute-20`)
+   - `BUILD_PLAN`: Northflank compute plan ID used for the image build (default `nf-compute-400-16`)
 3. Click **Execute**
+
+> **Plan IDs**: Northflank templates require the *plan ID* (e.g. `nf-compute-20`),
+> not the friendly name shown in the UI. Pick valid compute plans for your
+> account and pass them via `DEPLOYMENT_PLAN` (runtime) and `BUILD_PLAN` (build).
 
 ### 3. Monitor Deployment
 
 The sequential workflow will execute:
-1. **Node 1**: Create project `openclaw-headless-runtime`
-2. **Node 2**: Create secret group with API credentials (Telegram, Hugging Face)
-3. **Node 3**: Provision 4GB persistent volume
-4. **Node 4**: Build and deploy worker service
+1. **Project** (`openclaw-headless-runtime`) is created.
+2. **SecretGroup** (`openclaw-credentials`) is created with the API credentials. It is
+   restricted to workloads carrying the `openclaw` tag, so its variables are injected
+   only into the tagged service (not every workload in the project). Tag-based
+   restriction is used instead of a service-`id` reference so it resolves correctly
+   regardless of node ordering.
+3. **CombinedService** (`openclaw-gateway`) builds the Dockerfile from the repo and
+   deploys it. It exposes no ports, so it runs as a long-lived worker (the Telegram
+   bot uses outbound long-polling).
+4. **Volume** (`openclaw-state`, 4GB) is provisioned and attached to the service at `/data`.
 
 ### 4. Verify Deployment
 
@@ -66,13 +80,14 @@ The sequential workflow will execute:
 ## Architecture
 
 ```
-target-project (Node 1)
+project (openclaw-headless-runtime)
+    │   (child workflow runs in projectId context)
     │
-    ├──> secure-runtime-secrets (Node 2) ── requires project.id
+    ├──> SecretGroup (openclaw-credentials)   — restricted to the `openclaw` tag, injects into the tagged service
     │
-    ├──> stateful-storage-volume (Node 3) ── requires project.id
+    ├──> CombinedService (openclaw-gateway)   — builds Dockerfile, deploys portless worker
     │
-    └──> headless-daemon-worker (Node 4) ── requires project.id, volume.id, secrets
+    └──> Volume (openclaw-state, 4GB)         — attached to ${refs.service.id} at /data
 ```
 
 ## Configuration
@@ -83,17 +98,22 @@ The following environment variables are injected at runtime via the secret group
 
 | Variable | Description |
 |----------|-------------|
-| `OPENCLAW_TELEGRAM_BOT_TOKEN` | Telegram Bot authentication token |
-| `OPENCLAW_HUGGINGFACE_API_KEY` | Hugging Face model access key |
+| `OPENCLAW_TELEGRAM_BOT_TOKEN` | Telegram Bot authentication token (**required**) |
+| `OPENCLAW_GROQ_API_KEY` | Groq API key. When set, Groq is the **preferred** AI provider |
+| `OPENCLAW_HUGGINGFACE_API_KEY` | Hugging Face token (used when Groq is not configured) |
 | `OPENCLAW_HF_TOKEN` | Alias for OPENCLAW_HUGGINGFACE_API_KEY (HF SDK convention) |
+
+**Provider selection**: if `OPENCLAW_GROQ_API_KEY` is set the bot uses Groq;
+otherwise it falls back to Hugging Face. If neither is set, messages get a
+placeholder reply. At least one provider key is needed for AI responses.
 
 **Optional Environment Variables** (can be added later):
 
 | Variable | Description |
 |----------|-------------|
-| `OPENCLAW_HF_MODEL` | Chat-completion model id served by the HF Inference Providers router (default: `Qwen/Qwen2.5-7B-Instruct`) |
-| `OPENCLAW_GROQ_API_KEY` | Groq LLM inference API key |
-| `OPENCLAW_OPENROUTER_API_KEY` | OpenRouter multi-model API key |
+| `OPENCLAW_GROQ_MODEL` | Groq chat-completion model id (default: `llama-3.3-70b-versatile`) |
+| `OPENCLAW_HF_MODEL` | HF Inference Providers chat model id (default: `Qwen/Qwen2.5-7B-Instruct`) |
+| `OPENCLAW_OPENROUTER_API_KEY` | OpenRouter multi-model API key (not yet wired up) |
 
 > **Note**: The Hugging Face token must be a user access token with the
 > **"Inference Providers"** permission. Open Claw calls the chat-completions
@@ -103,8 +123,8 @@ The following environment variables are injected at runtime via the secret group
 ### Persistent Storage
 
 - **Volume Name**: `openclaw-state`
-- **Capacity**: 4GB
-- **Access Mode**: `shared-read-write-once`
+- **Capacity**: 4GB (`storageSize: 4096` MB)
+- **Storage Class**: `ssd`
 - **Mount Path**: `/data`
 
 ## Updating Configuration

@@ -10,6 +10,8 @@ import os
 import sys
 import logging
 from pathlib import Path
+from telegram import Update
+from telegram.ext import Application, CommandHandler, MessageHandler, filters
 
 # Configure logging
 logging.basicConfig(
@@ -18,13 +20,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Validate required environment variables (only Telegram and Hugging Face are mandatory)
+# Validate required environment variables (only Telegram is mandatory for now)
 REQUIRED_ENV_VARS = [
-    'OPENCLAW_TELEGRAM_BOT_TOKEN',
-    'OPENCLAW_HUGGINGFACE_API_KEY'
+    'OPENCLAW_TELEGRAM_BOT_TOKEN'
 ]
 
 OPTIONAL_ENV_VARS = [
+    'OPENCLAW_HUGGINGFACE_API_KEY',
     'OPENCLAW_GROQ_API_KEY',
     'OPENCLAW_OPENROUTER_API_KEY',
     'OPENCLAW_HF_TOKEN'
@@ -91,13 +93,13 @@ async def help_command(update, context):
 
 async def status_command(update, context):
     """Handle the /status command."""
-    hf_key = os.environ.get('OPENCLAW_HUGGINGFACE_API_KEY', 'Not set')
+    hf_key = os.environ.get('OPENCLAW_HUGGINGFACE_API_KEY')
     telegram_token = os.environ.get('OPENCLAW_TELEGRAM_BOT_TOKEN', 'Not set')
     
     status_msg = (
         "🔧 Open Claw Status\n\n"
         f"✅ Telegram Bot: {'Connected' if telegram_token else 'Disconnected'}\n"
-        f"✅ Hugging Face: {'Connected' if hf_key else 'Disconnected'}\n"
+        f"{'✅' if hf_key else '❌'} Hugging Face: {'Connected' if hf_key else 'Not configured (optional)'}\n"
         f"⚙️ Groq: {'Connected' if os.environ.get('OPENCLAW_GROQ_API_KEY') else 'Not configured'}\n"
         f"⚙️ OpenRouter: {'Connected' if os.environ.get('OPENCLAW_OPENROUTER_API_KEY') else 'Not configured'}\n\n"
         "Storage: /data (persistent)"
@@ -124,7 +126,6 @@ async def error_handler(update, context):
 
 def setup_telegram_bot():
     """Set up and start the Telegram bot."""
-    from telegram.ext import Application, CommandHandler, MessageHandler, filters
     
     token = os.environ.get('OPENCLAW_TELEGRAM_BOT_TOKEN')
     
@@ -166,8 +167,8 @@ def main():
     
     # Log successful initialization
     logger.info("Open Claw Headless Daemon initialized successfully")
-    logger.info("Required integrations: Telegram Bot, Hugging Face")
-    logger.info("Optional integrations (not configured): Groq, OpenRouter")
+    logger.info("Required integrations: Telegram Bot")
+    logger.info("Optional integrations: Hugging Face, Groq, OpenRouter")
     logger.info("Starting Telegram bot polling...")
     
     # Start the bot
@@ -182,5 +183,4 @@ def main():
         sys.exit(1)
 
 if __name__ == '__main__':
-    from telegram import Update
     main()

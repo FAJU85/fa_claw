@@ -23,10 +23,10 @@ This deployment automates the provisioning of:
 1. Northflank account with template creation permissions
 2. Git repository accessible to Northflank VCS integration
 3. API keys from:
-   - Telegram BotFather (`TELEGRAM_BOT_TOKEN`)
-   - Groq Console (`GROQ_API_KEY`)
-   - OpenRouter Dashboard (`OPENROUTER_API_KEY`)
-   - Hugging Face User Settings (`HUGGINGFACE_API_KEY`)
+   - Telegram BotFather (`OPENCLAW_TELEGRAM_BOT_TOKEN`)
+   - Groq Console (`OPENCLAW_GROQ_API_KEY`)
+   - OpenRouter Dashboard (`OPENCLAW_OPENROUTER_API_KEY`)
+   - Hugging Face User Settings (`OPENCLAW_HUGGINGFACE_API_KEY`)
 
 ## Deployment Steps
 
@@ -41,10 +41,10 @@ This deployment automates the provisioning of:
 
 1. Open the saved template and click **Run**
 2. Fill in all argument fields:
-   - `TELEGRAM_BOT_TOKEN`: Your Telegram bot token
-   - `GROQ_API_KEY`: Your Groq API key
-   - `OPENROUTER_API_KEY`: Your OpenRouter API key
-   - `HUGGINGFACE_API_KEY`: Your Hugging Face API key
+   - `OPENCLAW_TELEGRAM_BOT_TOKEN`: Your Telegram bot token
+   - `OPENCLAW_GROQ_API_KEY`: Your Groq API key
+   - `OPENCLAW_OPENROUTER_API_KEY`: Your OpenRouter API key
+   - `OPENCLAW_HUGGINGFACE_API_KEY`: Your Hugging Face API key
    - `GIT_REPO_URL`: URL to this Git repository
 3. Click **Execute**
 
@@ -87,11 +87,11 @@ The following environment variables are injected at runtime via the secret group
 
 | Variable | Description |
 |----------|-------------|
-| `TELEGRAM_BOT_TOKEN` | Telegram Bot authentication token |
-| `GROQ_API_KEY` | Groq LLM inference API key |
-| `OPENROUTER_API_KEY` | OpenRouter multi-model API key |
-| `HUGGINGFACE_API_KEY` | Hugging Face model access key |
-| `HF_TOKEN` | Alias for HUGGINGFACE_API_KEY (HF SDK convention) |
+| `OPENCLAW_TELEGRAM_BOT_TOKEN` | Telegram Bot authentication token |
+| `OPENCLAW_GROQ_API_KEY` | Groq LLM inference API key |
+| `OPENCLAW_OPENROUTER_API_KEY` | OpenRouter multi-model API key |
+| `OPENCLAW_HUGGINGFACE_API_KEY` | Hugging Face model access key |
+| `OPENCLAW_HF_TOKEN` | Alias for OPENCLAW_HUGGINGFACE_API_KEY (HF SDK convention) |
 
 ### Persistent Storage
 

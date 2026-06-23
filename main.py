@@ -19,11 +19,11 @@ logger = logging.getLogger(__name__)
 
 # Validate required environment variables
 REQUIRED_ENV_VARS = [
-    'TELEGRAM_BOT_TOKEN',
-    'GROQ_API_KEY',
-    'OPENROUTER_API_KEY',
-    'HUGGINGFACE_API_KEY',
-    'HF_TOKEN'
+    'OPENCLAW_TELEGRAM_BOT_TOKEN',
+    'OPENCLAW_GROQ_API_KEY',
+    'OPENCLAW_OPENROUTER_API_KEY',
+    'OPENCLAW_HUGGINGFACE_API_KEY',
+    'OPENCLAW_HF_TOKEN'
 ]
 
 def validate_environment():

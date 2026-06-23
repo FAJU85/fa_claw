@@ -1,63 +1,46 @@
-```
-# Python
+```gitignore
+# Compiled and binary files
+*.pyc
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual Environment
-venv/
-ENV/
-env/
-.venv/
-env.bak/
-runtime.txt
 
 # Dependencies
-pip-log.txt
-pip-delete-this-directory.txt
-.tox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.log
-.gitattributes
+.venv/
+venv/
+node_modules/
 
-# Local configuration
+# Build artifacts
+dist/
+build/
+target/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.swp
+
+# Environment files
 .env
 .env.local
-.env.dev
-.env.prod
-.env.*
-!requirements.txt
+*.env.*
 
-# IDE
+# Editors and IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*.tmp
 
-# OS
+# Coverage reports
+coverage/
+htmlcov/
+.coverage
+
+# MyPy cache
+.mypy_cache/
+
+# Pytest cache
+.pytest_cache/
+
+# OS generated files
 .DS_Store
 Thumbs.db
 ```

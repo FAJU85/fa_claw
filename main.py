@@ -8,6 +8,7 @@ Groq and OpenRouter integrations are optional and can be added later.
 
 import os
 import sys
+import asyncio
 import logging
 from pathlib import Path
 from telegram import Update
@@ -126,7 +127,7 @@ async def handle_message(update, context):
     logger.info(f"Hugging Face token available: {'YES' if hf_token else 'NO'}")
     
     if hf_token:
-        model = os.environ.get('OPENCLAW_HF_MODEL', DEFAULT_HF_MODEL)
+        model = os.environ.get('OPENCLAW_HF_MODEL') or DEFAULT_HF_MODEL
         try:
             # Call the Hugging Face Inference Providers router via the
             # OpenAI-compatible chat-completions API. The InferenceClient
@@ -134,7 +135,10 @@ async def handle_message(update, context):
             client = InferenceClient(token=hf_token)
 
             logger.info(f"Sending request to Hugging Face model '{model}'...")
-            completion = client.chat_completion(
+            # chat_completion is a blocking network call; run it in a worker
+            # thread so it does not block the bot's asyncio event loop.
+            completion = await asyncio.to_thread(
+                client.chat_completion,
                 messages=[{"role": "user", "content": user_message}],
                 model=model,
                 max_tokens=512,
@@ -147,9 +151,11 @@ async def handle_message(update, context):
             logger.info("Hugging Face response received")
             await update.message.reply_text(f"🤖 Open Claw AI Response:\n\n{ai_response}")
         except Exception as e:
+            # Log full detail server-side, but don't leak internals to users.
             logger.error(f"Error calling Hugging Face API: {e}")
             await update.message.reply_text(
-                f"⚠️ Error during AI processing: {str(e)}\n\nYour message was received."
+                "⚠️ Sorry, I couldn't process your message right now. "
+                "Your message was received — please try again shortly."
             )
     else:
         # Placeholder response when HF is not configured

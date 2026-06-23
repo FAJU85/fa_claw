@@ -46,20 +46,23 @@ This deployment automates the provisioning of:
    - `GIT_REPO_URL`: HTTPS URL to this Git repository
    - `GIT_BRANCH`: Branch to build from (default `main`)
    - `PROJECT_REGION`: Northflank region (default `europe-west`)
-   - `DEPLOYMENT_PLAN`: Northflank compute plan ID for the worker (default `nf-compute-20`)
+   - `DEPLOYMENT_PLAN`: Northflank compute plan ID for the running worker (default `nf-compute-20`)
+   - `BUILD_PLAN`: Northflank compute plan ID used for the image build (default `nf-compute-400-16`)
 3. Click **Execute**
 
 > **Plan IDs**: Northflank templates require the *plan ID* (e.g. `nf-compute-20`),
-> not the friendly name shown in the UI. Pick any valid compute plan for your
-> account and pass it via `DEPLOYMENT_PLAN`.
+> not the friendly name shown in the UI. Pick valid compute plans for your
+> account and pass them via `DEPLOYMENT_PLAN` (runtime) and `BUILD_PLAN` (build).
 
 ### 3. Monitor Deployment
 
 The sequential workflow will execute:
 1. **Project** (`openclaw-headless-runtime`) is created.
 2. **SecretGroup** (`openclaw-credentials`) is created with the API credentials. It is
-   *unrestricted*, so its variables are injected into every workload in the project
-   automatically — no explicit per-service binding is needed.
+   restricted to workloads carrying the `openclaw` tag, so its variables are injected
+   only into the tagged service (not every workload in the project). Tag-based
+   restriction is used instead of a service-`id` reference so it resolves correctly
+   regardless of node ordering.
 3. **CombinedService** (`openclaw-gateway`) builds the Dockerfile from the repo and
    deploys it. It exposes no ports, so it runs as a long-lived worker (the Telegram
    bot uses outbound long-polling).
@@ -80,7 +83,7 @@ The sequential workflow will execute:
 project (openclaw-headless-runtime)
     │   (child workflow runs in projectId context)
     │
-    ├──> SecretGroup (openclaw-credentials)   — unrestricted, auto-injects into all workloads
+    ├──> SecretGroup (openclaw-credentials)   — restricted to the `openclaw` tag, injects into the tagged service
     │
     ├──> CombinedService (openclaw-gateway)   — builds Dockerfile, deploys portless worker
     │

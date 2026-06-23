@@ -8,7 +8,8 @@
     "GIT_REPO_URL": "https://github.com/FAJU85/fa_claw",
     "GIT_BRANCH": "main",
     "PROJECT_REGION": "europe-west",
-    "DEPLOYMENT_PLAN": "nf-compute-20"
+    "DEPLOYMENT_PLAN": "nf-compute-20",
+    "BUILD_PLAN": "nf-compute-400-16"
   },
   "options": {
     "autorun": false,
@@ -46,8 +47,10 @@
                   "secretType": "environment",
                   "priority": 10,
                   "restrictions": {
-                    "restricted": false,
-                    "nfObjects": []
+                    "restricted": true,
+                    "nfObjects": [],
+                    "tags": ["openclaw"],
+                    "tagMatchCondition": "or"
                   },
                   "secrets": {
                     "variables": {
@@ -63,9 +66,10 @@
                 "ref": "service",
                 "spec": {
                   "name": "openclaw-gateway",
+                  "tags": ["openclaw"],
                   "billing": {
                     "deploymentPlan": "${args.DEPLOYMENT_PLAN}",
-                    "buildPlan": "nf-compute-400-16"
+                    "buildPlan": "${args.BUILD_PLAN}"
                   },
                   "deployment": {
                     "instances": 1,

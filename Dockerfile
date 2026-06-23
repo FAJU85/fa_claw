@@ -21,8 +21,6 @@ RUN mkdir -p /data && chmod 755 /data
 
 # Set environment variables (will be overridden by Northflank secrets)
 ENV OPENCLAW_TELEGRAM_BOT_TOKEN=""
-ENV OPENCLAW_GROQ_API_KEY=""
-ENV OPENCLAW_OPENROUTER_API_KEY=""
 ENV OPENCLAW_HUGGINGFACE_API_KEY=""
 ENV OPENCLAW_HF_TOKEN=""
 

@@ -1,77 +1,41 @@
 ```
-# Docker related
-.dockerenv
-Dockerfile.*
-
-# Dependencies
-node_modules/
-vendor/
-lib/
-
-# Build artifacts
-dist/
-build/
-target/
-out/
-bin/
-
 # Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 .Python
-env/
 venv/
 .venv/
-pip-log.txt
-pip-delete-this-directory.txt
-.tox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.log
-*.tmp
-*.swp
-*.swo
-
-# Environment specific
 .env
 .env.local
-.env.*
-!env.sample
-!env.example
+*.env.*
 
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-Icon?
-desktop.ini
+# Logs
+*.log
+
+# Coverage
+.coverage
+coverage/
+htmlcov/
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
+*.tmp
 
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# OS
+.DS_Store
+Thumbs.db
 
-# Coverage
-coverage/
-htmlcov/
-.coverage
-.coverage.*
+# Build
+build/
+dist/
+*.egg-info/
+
+# Testing
+.pytest_cache/
+.mypy_cache/
 ```

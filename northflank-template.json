@@ -13,16 +13,6 @@
         "description": "Telegram Bot Token from BotFather"
       },
       {
-        "name": "OPENCLAW_GROQ_API_KEY",
-        "type": "secret",
-        "description": "Groq API Key for LLM inference"
-      },
-      {
-        "name": "OPENCLAW_OPENROUTER_API_KEY",
-        "type": "secret",
-        "description": "OpenRouter API Key for multi-model access"
-      },
-      {
         "name": "OPENCLAW_HUGGINGFACE_API_KEY",
         "type": "secret",
         "description": "Hugging Face API Key for model access"
@@ -54,14 +44,6 @@
               {
                 "name": "OPENCLAW_TELEGRAM_BOT_TOKEN",
                 "value": "${arguments.OPENCLAW_TELEGRAM_BOT_TOKEN}"
-              },
-              {
-                "name": "OPENCLAW_GROQ_API_KEY",
-                "value": "${arguments.OPENCLAW_GROQ_API_KEY}"
-              },
-              {
-                "name": "OPENCLAW_OPENROUTER_API_KEY",
-                "value": "${arguments.OPENCLAW_OPENROUTER_API_KEY}"
               },
               {
                 "name": "OPENCLAW_HUGGINGFACE_API_KEY",

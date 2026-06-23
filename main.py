@@ -12,6 +12,7 @@ import logging
 from pathlib import Path
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
+import requests
 
 # Configure logging
 logging.basicConfig(
@@ -111,14 +112,53 @@ async def handle_message(update, context):
     user_message = update.message.text
     logger.info(f"Received message from user {update.message.chat.id}: {user_message}")
     
-    # TODO: Integrate with Hugging Face for AI processing
-    # For now, echo back with a placeholder response
-    response = (
-        f"🤖 Open Claw received your message:\n\n"
-        f"\"{user_message}\"\n\n"
-        f"AI processing will be implemented soon with Hugging Face integration."
-    )
-    await update.message.reply_text(response)
+    # Check if Hugging Face is configured
+    hf_key_1 = os.environ.get('OPENCLAW_HUGGINGFACE_API_KEY')
+    hf_key_2 = os.environ.get('OPENCLAW_HF_TOKEN')
+    hf_token = hf_key_1 or hf_key_2
+    
+    logger.info(f"Hugging Face key check - OPENCLAW_HUGGINGFACE_API_KEY: {'SET' if hf_key_1 else 'NOT SET'}")
+    logger.info(f"Hugging Face key check - OPENCLAW_HF_TOKEN: {'SET' if hf_key_2 else 'NOT SET'}")
+    logger.info(f"Hugging Face token available: {'YES' if hf_token else 'NO'}")
+    
+    if hf_token:
+        try:
+            # Send to Hugging Face Inference API
+            API_URL = "https://api-inference.huggingface.co/models/google/flan-t5-large"
+            headers = {"Authorization": f"Bearer {hf_token}"}
+            
+            logger.info(f"Sending request to Hugging Face API...")
+            response = requests.post(API_URL, headers=headers, json={"inputs": user_message})
+            
+            if response.status_code == 200:
+                result = response.json()
+                logger.info(f"Hugging Face response: {result}")
+                
+                # Extract the generated text
+                if isinstance(result, list) and len(result) > 0:
+                    ai_response = result[0].get('generated_text', 'No response generated')
+                elif isinstance(result, dict):
+                    ai_response = result.get('generated_text', 'No response generated')
+                else:
+                    ai_response = str(result)
+                
+                await update.message.reply_text(f"🤖 Open Claw AI Response:\n\n{ai_response}")
+            else:
+                error_msg = f"Hugging Face API error: {response.status_code} - {response.text}"
+                logger.error(error_msg)
+                await update.message.reply_text(f"⚠️ AI processing failed:\n{response.status_code}\n\nYour message was received but couldn't be processed.")
+        except Exception as e:
+            logger.error(f"Error calling Hugging Face API: {e}")
+            await update.message.reply_text(f"⚠️ Error during AI processing: {str(e)}\n\nYour message was received.")
+    else:
+        # Placeholder response when HF is not configured
+        logger.warning("Hugging Face not configured - using placeholder response")
+        response = (
+            f"🤖 Open Claw received your message:\n\n"
+            f"\"{user_message}\"\n\n"
+            f"AI processing will be implemented soon with Hugging Face integration."
+        )
+        await update.message.reply_text(response)
 
 async def error_handler(update, context):
     """Handle errors."""

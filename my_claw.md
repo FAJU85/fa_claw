@@ -10,14 +10,14 @@ Template Configuration:
 
 · northflank-template.json file created in project repository with correct schema (apiVersion: "v1")
 · Template name set to openclaw-automated-deployment
-· All four secret arguments defined: TELEGRAM_BOT_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY, HUGGINGFACE_API_KEY
+· All four secret arguments defined: OPENCLAW_TELEGRAM_BOT_TOKEN, OPENCLAW_GROQ_API_KEY, OPENCLAW_OPENROUTER_API_KEY, OPENCLAW_HUGGINGFACE_API_KEY
 · GIT_REPO_URL argument defined as string type pointing to repository containing the Dockerfile
 
 Sequential Workflow Execution:
 
 · Workflow provision-openclaw-pipeline configured as sequential type
 · Node 1 (target-project): Project openclaw-headless-runtime provisioned in region europe-west
-· Node 2 (secure-runtime-secrets): Secret group openclaw-multi-provider-credentials created with all five environment variables mapped from arguments (TELEGRAM_BOT_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY, HUGGINGFACE_API_KEY, HF_TOKEN)
+· Node 2 (secure-runtime-secrets): Secret group openclaw-multi-provider-credentials created with all five environment variables mapped from arguments (OPENCLAW_TELEGRAM_BOT_TOKEN, OPENCLAW_GROQ_API_KEY, OPENCLAW_OPENROUTER_API_KEY, OPENCLAW_HUGGINGFACE_API_KEY, OPENCLAW_HF_TOKEN)
 · Secret group correctly references target-project.id via projectContext binding
 
 Persistent Storage:
@@ -56,7 +56,7 @@ Technical Notes:
 
 · Sequential workflow type enforces dependency resolution: volume and secrets must complete validation before worker service initializes
 · Template arguments use Northflank's native parameterized injection (${arguments.VARIABLE_NAME}) and node dependency chaining (${target-project.id}, ${stateful-storage-volume.id})
-· HF_TOKEN duplicated from HUGGINGFACE_API_KEY argument to satisfy Hugging Face SDK convention
+· HF_TOKEN duplicated from OPENCLAW_HUGGINGFACE_API_KEY argument to satisfy Hugging Face SDK convention
 · Shared-read-write-once access mode ensures single-instance write safety with read capability
 · Dockerfile must exist at repository root and be valid for multi-stage or single-stage builds
 · Northflank region europe-west selected; adjust if latency or data residency requirements differ
@@ -107,10 +107,10 @@ Sub-Task 2: Create Northflank Template
 Sub-Task 3: Configure Secret Arguments
 
 · Gather production-ready values for:
-  · TELEGRAM_BOT_TOKEN (from BotFather or Telegram API console)
-  · GROQ_API_KEY (from Groq Console)
-  · OPENROUTER_API_KEY (from OpenRouter dashboard)
-  · HUGGINGFACE_API_KEY (from Hugging Face user access tokens)
+  · OPENCLAW_TELEGRAM_BOT_TOKEN (from BotFather or Telegram API console)
+  · OPENCLAW_GROQ_API_KEY (from Groq Console)
+  · OPENCLAW_OPENROUTER_API_KEY (from OpenRouter dashboard)
+  · OPENCLAW_HUGGINGFACE_API_KEY (from Hugging Face user access tokens)
 · Verify each key has appropriate permissions/scopes for Open Claw operations
 · Confirm keys are active and not expired or revoked
 · Store keys securely outside repository (do not commit to Git)
@@ -135,7 +135,7 @@ Sub-Task 5: Post-Deployment Verification
 · Verify Telegram integration: send test message to bot, confirm response
 · Verify Groq integration: trigger a Groq-dependent operation, confirm API call succeeds
 · Verify OpenRouter integration: trigger an OpenRouter-dependent operation, confirm API call succeeds
-· Verify Hugging Face integration: trigger an HF-dependent operation, confirm HF_TOKEN resolves correctly
+· Verify Hugging Face integration: trigger an HF-dependent operation, confirm OPENCLAW_HF_TOKEN resolves correctly
 · Verify persistent storage: write test data to /data, restart service, confirm data persists across restart
 · Confirm all environment variables are injected and readable at runtime (spot-check via logs or diagnostic command if available)
 

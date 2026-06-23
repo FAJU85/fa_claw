@@ -6,7 +6,7 @@ This repository contains the Infrastructure-as-Code (IaC) template and deploymen
 
 This deployment automates the provisioning of:
 - **Project**: `openclaw-headless-runtime` in europe-west region
-- **Secrets**: Multi-provider API credentials (Telegram, Groq, OpenRouter, Hugging Face)
+- **Secrets**: API credentials (Telegram, Hugging Face)
 - **Storage**: 4GB persistent volume mounted at `/data`
 - **Service**: Worker daemon pulling from this repository
 
@@ -24,9 +24,9 @@ This deployment automates the provisioning of:
 2. Git repository accessible to Northflank VCS integration
 3. API keys from:
    - Telegram BotFather (`OPENCLAW_TELEGRAM_BOT_TOKEN`)
-   - Groq Console (`OPENCLAW_GROQ_API_KEY`)
-   - OpenRouter Dashboard (`OPENCLAW_OPENROUTER_API_KEY`)
    - Hugging Face User Settings (`OPENCLAW_HUGGINGFACE_API_KEY`)
+
+**Note**: Groq and OpenRouter API keys are optional and can be added later when needed.
 
 ## Deployment Steps
 
@@ -42,8 +42,6 @@ This deployment automates the provisioning of:
 1. Open the saved template and click **Run**
 2. Fill in all argument fields:
    - `OPENCLAW_TELEGRAM_BOT_TOKEN`: Your Telegram bot token
-   - `OPENCLAW_GROQ_API_KEY`: Your Groq API key
-   - `OPENCLAW_OPENROUTER_API_KEY`: Your OpenRouter API key
    - `OPENCLAW_HUGGINGFACE_API_KEY`: Your Hugging Face API key
    - `GIT_REPO_URL`: URL to this Git repository
 3. Click **Execute**
@@ -52,7 +50,7 @@ This deployment automates the provisioning of:
 
 The sequential workflow will execute:
 1. **Node 1**: Create project `openclaw-headless-runtime`
-2. **Node 2**: Create secret group with all API credentials
+2. **Node 2**: Create secret group with API credentials (Telegram, Hugging Face)
 3. **Node 3**: Provision 4GB persistent volume
 4. **Node 4**: Build and deploy worker service
 
@@ -62,8 +60,6 @@ The sequential workflow will execute:
 - Verify Open Claw initializes without errors
 - Test integrations:
   - Send a message to your Telegram bot
-  - Trigger Groq-dependent operations
-  - Trigger OpenRouter-dependent operations
   - Trigger Hugging Face-dependent operations
 - Verify persistent storage by writing/reading data at `/data`
 
@@ -88,10 +84,15 @@ The following environment variables are injected at runtime via the secret group
 | Variable | Description |
 |----------|-------------|
 | `OPENCLAW_TELEGRAM_BOT_TOKEN` | Telegram Bot authentication token |
-| `OPENCLAW_GROQ_API_KEY` | Groq LLM inference API key |
-| `OPENCLAW_OPENROUTER_API_KEY` | OpenRouter multi-model API key |
 | `OPENCLAW_HUGGINGFACE_API_KEY` | Hugging Face model access key |
 | `OPENCLAW_HF_TOKEN` | Alias for OPENCLAW_HUGGINGFACE_API_KEY (HF SDK convention) |
+
+**Optional Environment Variables** (can be added later):
+
+| Variable | Description |
+|----------|-------------|
+| `OPENCLAW_GROQ_API_KEY` | Groq LLM inference API key |
+| `OPENCLAW_OPENROUTER_API_KEY` | OpenRouter multi-model API key |
 
 ### Persistent Storage
 
@@ -134,7 +135,7 @@ If deployment fails:
 | Template validation fails | Check JSON syntax and schema compliance |
 | Git repository unreachable | Verify URL, branch name, and access permissions |
 | Dockerfile build fails | Check Dockerfile syntax and dependencies |
-| API calls fail at runtime | Verify API keys are valid and have correct permissions |
+| API calls fail at runtime | Verify API keys (Telegram, Hugging Face) are valid and have correct permissions |
 | Volume mount fails | Check volume status and access mode |
 | Worker crashes | Review logs for error details |
 
